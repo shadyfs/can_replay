@@ -70,33 +70,35 @@ def replay_tp_messages(bus):
                 )
                 bus.send(rts_msg)
                 print(f"Sent RTS message: {rts_msg}")
-                cts_msg = bus.recv()
-                pf_cts = (cts_msg.arbitration_id >> 16) & 0xFF 
-                da_cts = (cts_msg.arbitration_id >> 8) & 0xFF 
-                sa_cts = cts_msg.arbitration_id & 0xFF       
-                print(f"Received CTS message: {cts_msg}")
-                # print(f"Extracted PF={pf_cts:02X}, DA={da_cts:02X}, SA={sa_cts:02X}")
+                while True:
+                    cts_msg = bus.recv()
+                    pf_cts = (cts_msg.arbitration_id >> 16) & 0xFF 
+                    da_cts = (cts_msg.arbitration_id >> 8) & 0xFF 
+                    sa_cts = cts_msg.arbitration_id & 0xFF       
+                    # print(f"Received CTS message: {cts_msg}")
+                    # print(f"Extracted PF={pf_cts:02X}, DA={da_cts:02X}, SA={sa_cts:02X}")
 
-                if (
-                    pf_cts == 0xEC and         
-                    da_cts == da and          
-                    sa_cts == sa and           
-                    cts_msg.data[0] == 0x11    
-                ):
-                    print(f"CTS received for packet transmission.")
-                    data_messages = find_tp_data(sa, da)
-                    for packet_number, data_payload in data_messages.items():
-                        dt_msg = can.Message(
-                            arbitration_id=int(rts_id.replace("EC", "EB"), 16), 
-                            data=bytes.fromhex(data_payload),
-                            is_extended_id=True
-                        )
-                        try:
-                            bus.send(dt_msg)
-                            print(f"Sent Data Packet {packet_number}: {dt_msg}")
-                            time.sleep(0.1)  
-                        except can.CanError as e:
-                            print(f"Error sending packet {packet_number}: {e}")
+                    if (
+                        pf_cts == 0xEC and         
+                        da_cts == da and          
+                        sa_cts == sa and           
+                        cts_msg.data[0] == 0x11    
+                    ):
+                        print(f"CTS received for packet transmission.")
+                        data_messages = find_tp_data(sa, da)
+                        for packet_number, data_payload in data_messages.items():
+                            dt_msg = can.Message(
+                                arbitration_id=int(rts_id.replace("EC", "EB"), 16), 
+                                data=bytes.fromhex(data_payload),
+                                is_extended_id=True
+                            )
+                            try:
+                                bus.send(dt_msg)
+                                print(f"Sent Data Packet {packet_number}: {dt_msg}")
+                                time.sleep(0.1)  
+                            except can.CanError as e:
+                                print(f"Error sending packet {packet_number}: {e}")
+                        break
 
 
 
